@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Install debi GNU/Linux
+Name[ar]=تثبيت debi GNU/Linux
+GenericName=Live Installer
+Comment=Install the operating system to disk
+Comment[ar]=تثبيت النظام على القرص المحلي
+Exec=remsu /usr/bin/live-installer
+Icon=live-installer
+Terminal=False
+Type=Application
+Categories=System;

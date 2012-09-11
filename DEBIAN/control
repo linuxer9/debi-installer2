@@ -1,0 +1,10 @@
+Package: debi-installer
+Version: 3.3
+Architecture: all
+Maintainer: Mohamed Mohsen <linuxer9@gmail.com>
+Installed-Size: 1472
+Depends: python (>= 2.4), python (<< 3), python-gtk2, python-glade2
+Section: admin
+Priority: optional
+Description: debi GNU/Linux Linux Installer
+ An installer for debi GNU/Linux

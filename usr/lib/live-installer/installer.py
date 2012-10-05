@@ -1,11 +1,14 @@
+#Changes: added last changes(Fix seperate partion mount), replaced Popen with getoutput(), fill fstab by uuid (getuuid) and some formating :)
+
 import os
-import subprocess
-from subprocess import Popen
-import time
-import shutil
+#Not used modules O.o
+#import time
+#import shutil
+#was duplicated, now not used, replaced by getoutput() :P
+#from subprocess import *
 import gettext
 import stat
-import commands
+from commands import getoutput
 from configobj import ConfigObj
 
 gettext.install("debi-installer", "/usr/share/locale")
@@ -26,9 +29,7 @@ class HostMachine:
 		''' Returns True/False as to whether the host is a laptop '''
 		ret = False
 		try:
-			p = Popen("laptop-detect", shell=True)
-			p.wait() # we want the return code
-			retcode = p.returncode
+			retcode = getoutput("laptop-detect", shell=True)
 			if(retcode == 0):
 				# its a laptop
 				ret = True
@@ -40,7 +41,7 @@ class HostMachine:
 		''' return the model of the pooter '''
 		ret = None
 		try:
-			model = commands.getoutput("dmidecode --string system-product-name")
+			model = getoutput("dmidecode --string system-product-name")
 			ret = model.rstrip("\r\n").lstrip()
 		except:
 			pass # doesn't matter.
@@ -50,7 +51,7 @@ class HostMachine:
 		''' return the system manufacturer '''
 		ret = None
 		try:
-			manu = commands.getoutput("dmidecode --string system-manufacturer")
+			manu = getoutput("dmidecode --string system-manufacturer")
 			ret = manu.rstrip("\r\n ").lstrip()
 		except:
 			pass # doesn't matter
@@ -95,9 +96,7 @@ class InstallerEngine:
 		else:
 			cmd = "mkfs.%s %s" % (filesystem, device)
 			
-	p = Popen(cmd, shell=True)
-	p.wait() # this blocks
-	return p.returncode
+	return getoutput(cmd)
        
     def set_install_media(self, media=None, type=None):
 	''' Sets the location of our install source '''
@@ -118,8 +117,8 @@ class InstallerEngine:
 	self.grub_device = device
 		
     def add_to_blacklist(self, blacklistee):
-	''' This will add a directory or file to the blacklist, so that '''
-	''' it is not copied onto the new filesystem '''
+	''' This will add a directory or file to the blacklist, so that
+	it is not copied onto the new filesystem '''
 	try:
 		self.blacklist.index(blacklistee)
 		self.blacklist.append(blacklistee)
@@ -128,9 +127,9 @@ class InstallerEngine:
 		pass
 
     def set_progress_hook(self, progresshook):
-	''' Set a callback to be called on progress updates '''
-	''' i.e. def my_callback(progress_type, message, current_progress, total) '''
-	''' Where progress_type is any off PROGRESS_START, PROGRESS_UPDATE, PROGRESS_COMPLETE, PROGRESS_ERROR '''
+	''' Set a callback to be called on progress updates
+	i.e. def my_callback(progress_type, message, current_progress, total)
+	Where progress_type is any off PROGRESS_START, PROGRESS_UPDATE, PROGRESS_COMPLETE, PROGRESS_ERROR '''
 	self.update_progress = progresshook
 
     def get_distribution_name(self):
@@ -179,32 +178,36 @@ class InstallerEngine:
 				item.format = True
 			elif(item.mountpoint == "/tmp"):
 				tmp_device = item
-				item.format = True
+				#item.format = True
+				#May be not formatted, So we left it to its default value.
 			elif(item.mountpoint == "/boot"):
 				boot_device = item
-				item.format = True
+				#item.format = True
 			elif(item.mountpoint == "/home"):
 				home_device = item
+				#item.format = True
 			elif(item.mountpoint == "/srv"):
 				srv_device = item
-				item.format = True
+				#item.format = True
 			if(item.format):
 				# well now, we gets to nuke stuff.
 				# report it. should grab the total count of filesystems to be formatted ..
-				self.update_progress(total=4, current=1, pulse=True, message=_("Formatting %s as %s..." % (item.device, item.filesystem)))
+				self.update_progress(total=7, current=1, pulse=True, message=_("Formatting %s as %s..." % (item.device, item.filesystem)))
 				self.format_device(item.device, item.filesystem)
 		# mount filesystem
-		self.update_progress(total=4, current=2, message=_("Mounting %s on %s") % (root, "/source/"))
+		self.update_progress(total=7, current=2, message=_("Mounting %s on %s") % (root, "/source/"))
 		self.do_mount(root, "/source/", root_type, options="loop")
-		self.update_progress(total=4, current=3, message=_("Mounting %s on %s") % (root_device.device, "/target/"))
-		self.do_mount(root_device.device, "/target", root_device.filesystem, None)
 		if tmp_device != None:
+			self.update_progress(total=7, current=3, message=_("Mounting %s on %s") % (tmp_device.device, "/target/tmp"))
 			self.do_mount(tmp_device.device, "/target/tmp", tmp_device.filesystem, None)
 		if boot_device != None:
+			self.update_progress(total=7, current=4, message=_("Mounting %s on %s") % (boot_device.device, "/target/boot"))
 			self.do_mount(boot_device.device, "/target/boot", boot_device.filesystem, None)
 		if home_device != None:
+			self.update_progress(total=7, current=5, message=_("Mounting %s on %s") % (home_device.device, "/target/home"))
 			self.do_mount(home_device.device, "/target/home", home_device.filesystem, None)
 		if srv_device != None:
+			self.update_progress(total=7, current=6, message=_("Mounting %s on %s") % (srv_device.device, "/target/srv"))
 			self.do_mount(srv_device.device, "/target/srv", srv_device.filesystem, None)
 		# walk root filesystem. we're too lazy though :P
 		SOURCE = "/source/"
@@ -286,12 +289,9 @@ class InstallerEngine:
 		os.system("mount --bind /dev/pts /target/dev/pts")
 		os.system("mount --bind /sys/ /target/sys/")
 		os.system("mount --bind /proc/ /target/proc/")
-		os.system("cp -f /etc/resolv.conf /target/etc/resolv.conf")
+		os.system("cp -f /etc/resolv.conf /target/etc/resolv.conf")		
 		
 		
-			
-			
-			
 		# remove live user
 		live_user = self.live_user
 		our_current += 1
@@ -326,14 +326,15 @@ class InstallerEngine:
 			os.system("echo \"#### Static Filesystem Table File\" > /target/etc/fstab")
 		fstabber = open("/target/etc/fstab", "a")
 		fstabber.write("proc\t/proc\tproc\tnodev,noexec,nosuid\t0\t0\n")
+		
 		for item in self.fstab.get_entries():
 			if(item.options is None):
 				item.options = "rw,errors=remount-ro"
 			if(item.filesystem == "swap"):
 				# special case..
-				fstabber.write("%s\tswap\tswap\tsw\t0\t0\n" % item.device)
+				fstabber.write("%s\tswap\tswap\tsw\t0\t0\n" % getuuid(item.device))
 			else:
-				fstabber.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (item.device, item.mountpoint, item.filesystem, item.options, "0", "0"))
+				fstabber.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (getuuid(item.device), item.mountpoint, item.filesystem, item.options, "0", "0"))
 		fstabber.close()
 		# write host+hostname infos
 		our_current += 1
@@ -357,8 +358,6 @@ class InstallerEngine:
 		os.system("sed -i -e 's/auto_login/#auto_login/g' /target/etc/slim.conf")
 		os.system("sed -i -e 's/default_user/#default_user/g' /target/etc/slim.conf")
 		
-
-		
 		# set the locale
 		our_current += 1
 		self.sub_update_progress(total=our_total, current=our_current, message=_("Setting locale"))
@@ -368,8 +367,7 @@ class InstallerEngine:
             	self.do_run_in_chroot("update-locale LANG=\"%s.UTF-8\"" % self.locale)
             	self.do_run_in_chroot("update-locale LANG=%s.UTF-8" % self.locale)
 
-
-			# set the keyboard options..
+		# set the keyboard options..
 		our_current += 1
 		self.sub_update_progress(total=our_total, current=our_current, message=_("Setting keyboard options"))
 		consolefh = open("/etc/default/console-setup", "r")
@@ -386,9 +384,7 @@ class InstallerEngine:
 		newconsolefh.close()
 		os.system("rm /etc/default/console-setup")
 		os.system("mv /etc/default/console-setup.new /etc/default/console-setup")
-
-
-		
+	
 		# write MBR (grub)
 		our_current += 1
 			
@@ -402,8 +398,6 @@ class InstallerEngine:
 		os.system("umount --force /target/proc/")
 		self.do_unmount("/target")
 		self.do_unmount("/source")
-
-
 
 		self.update_progress(done=True, message=_("Installation finished"))
 	except Exception,detail:
@@ -420,18 +414,16 @@ class InstallerEngine:
 	''' Mount a filesystem '''
 	p = None
 	if(options is not None):
-		p = Popen("mount -o %s -t %s %s %s" % (options, type, device, dest),shell=True)
+		p = getoutput("mount -o %s -t %s %s %s" % (options, type, device, dest))
 	else:
-		p = Popen("mount -t %s %s %s" % (type, device, dest),shell=True)
+		p = getoutput("mount -t %s %s %s" % (type, device, dest))
 	p.wait()
 	return p.returncode
        
     def do_unmount(self, mountpoint):
 	''' Unmount a filesystem '''
-	p = Popen("umount %s" % mountpoint, shell=True)
-	p.wait()
-	return p.returncode
-       
+	return getoutput("umount %s" % mountpoint)
+	
     def copy_file(self, source, dest):
 	# TODO: Add md5 checks. BADLY needed..
 	BUF_SIZE = 16 * 1024
@@ -472,12 +464,20 @@ class fstab(object):
 			return True
 	return False
 		
+def getuuid(dev):
+	'''This function gives you the UUID for any device you need,
+	You can give it the device in any way you want '/dev/sda1', '/sda1' or 'sda1'
+	and it will return the UUID to you.
+	'''
+	cmd=r"blkid | grep "+dev+r" | sed  's/.*UUID=\"\([^\"]\+\)\".*/\1/'"
+	return getoutput(cmd)
+	
 class fstab_entry(object):
     ''' Represents an entry in fstab '''
    
     def __init__(self, device, mountpoint, filesystem, options):
 	''' Creates a new fstab entry '''
-	self.device = device
+	self.device = getuuid(device)
 	self.mountpoint = mountpoint
 	self.filesystem = filesystem
 	self.options = options

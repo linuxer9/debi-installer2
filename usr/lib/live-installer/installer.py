@@ -155,6 +155,10 @@ class InstallerEngine:
 	try:
 		if(not os.path.exists("/target")):
 			os.mkdir("/target")
+			os.mkdir("/target/home")
+			os.mkdir("/target/tmp")
+			os.mkdir("/target/boot")
+			os.mkdir("/target/srv")
 		if(not os.path.exists("/source")):
 			os.mkdir("/source")
 		# find the squashfs..
@@ -164,10 +168,25 @@ class InstallerEngine:
 			print _("Base filesystem does not exist! Bailing")
 			sys.exit(1) # change to report
 		root_device = None
+		tmp_device = None
+		boot_device = None
+		home_device = None
+		srv_device = None
 		# format partitions as appropriate
 		for item in self.fstab.get_entries():
 			if(item.mountpoint == "/"):
 				root_device = item
+				item.format = True
+			elif(item.mountpoint == "/tmp"):
+				tmp_device = item
+				item.format = True
+			elif(item.mountpoint == "/boot"):
+				boot_device = item
+				item.format = True
+			elif(item.mountpoint == "/home"):
+				home_device = item
+			elif(item.mountpoint == "/srv"):
+				srv_device = item
 				item.format = True
 			if(item.format):
 				# well now, we gets to nuke stuff.
@@ -179,6 +198,14 @@ class InstallerEngine:
 		self.do_mount(root, "/source/", root_type, options="loop")
 		self.update_progress(total=4, current=3, message=_("Mounting %s on %s") % (root_device.device, "/target/"))
 		self.do_mount(root_device.device, "/target", root_device.filesystem, None)
+		if tmp_device != None:
+			self.do_mount(tmp_device.device, "/target/tmp", tmp_device.filesystem, None)
+		if boot_device != None:
+			self.do_mount(boot_device.device, "/target/boot", boot_device.filesystem, None)
+		if home_device != None:
+			self.do_mount(home_device.device, "/target/home", home_device.filesystem, None)
+		if srv_device != None:
+			self.do_mount(srv_device.device, "/target/srv", srv_device.filesystem, None)
 		# walk root filesystem. we're too lazy though :P
 		SOURCE = "/source/"
 		DEST = "/target/"
@@ -360,9 +387,7 @@ class InstallerEngine:
 		os.system("rm /etc/default/console-setup")
 		os.system("mv /etc/default/console-setup.new /etc/default/console-setup")
 
-		# notify that we be finished now.
-		our_current += 1
-		self.sub_update_progress(done=True, total=our_total, current=our_current, message=_("Done."))
+
 		
 		# write MBR (grub)
 		our_current += 1
@@ -377,6 +402,8 @@ class InstallerEngine:
 		os.system("umount --force /target/proc/")
 		self.do_unmount("/target")
 		self.do_unmount("/source")
+
+
 
 		self.update_progress(done=True, message=_("Installation finished"))
 	except Exception,detail:

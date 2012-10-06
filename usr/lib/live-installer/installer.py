@@ -1,4 +1,4 @@
-#Changes: added last changes(Fix seperate partion mount), replaced Popen with getoutput(), fill fstab by uuid (getuuid) and some formating :)
+#Changes: added last changes(Fix seperate partion mount), replaced Popen with getoutput(), fill fstab by uuid (getuuid), some formating and the lastchange was fix getuuid() and getoutput() :)
 
 import os
 #Not used modules O.o
@@ -29,7 +29,7 @@ class HostMachine:
 		''' Returns True/False as to whether the host is a laptop '''
 		ret = False
 		try:
-			retcode = getoutput("laptop-detect", shell=True)
+			retcode = getoutput("laptop-detect")
 			if(retcode == 0):
 				# its a laptop
 				ret = True
@@ -417,8 +417,7 @@ class InstallerEngine:
 		p = getoutput("mount -o %s -t %s %s %s" % (options, type, device, dest))
 	else:
 		p = getoutput("mount -t %s %s %s" % (type, device, dest))
-	p.wait()
-	return p.returncode
+	return p
        
     def do_unmount(self, mountpoint):
 	''' Unmount a filesystem '''
@@ -467,10 +466,10 @@ class fstab(object):
 def getuuid(dev):
 	'''This function gives you the UUID for any device you need,
 	You can give it the device in any way you want '/dev/sda1', '/sda1' or 'sda1'
-	and it will return the UUID to you.
-	'''
+	and it will return "UUID=(dev-uuid)" to use directly in fstab.'''
+	
 	cmd=r"blkid | grep "+dev+r" | sed  's/.*UUID=\"\([^\"]\+\)\".*/\1/'"
-	return getoutput(cmd)
+	return "UUID="+getoutput(cmd)
 	
 class fstab_entry(object):
     ''' Represents an entry in fstab '''
